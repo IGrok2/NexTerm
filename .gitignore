@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+build/
+dist/
+artifacts/
+NexTerm.spec
+
+# Local app/runtime data
+server/licenses/*.json
+server/licenses/manifest.json
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
