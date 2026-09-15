@@ -460,10 +460,11 @@ class SettingsPage(QWidget):
         self.discord_rpc=SwitchButton();self.discord_rpc.setChecked(bool(s.get("discord_rpc",False)))
         self.discord_client_id=LineEdit();self.discord_client_id.setPlaceholderText("Discord Application ID");self.discord_client_id.setText(str(s.get("discord_client_id",Store.DEFAULT_DISCORD_CLIENT_ID)))
         self.discord_details=LineEdit();self.discord_details.setMaxLength(128);self.discord_details.setText(s.get("discord_details","Взламывает Пентагон"))
-        self.github_repo=LineEdit();self.github_repo.setPlaceholderText("owner/repository");self.github_repo.setText(str(s.get("github_repo","Ilja/NexTerm")))
+        self.github_repo=LineEdit();self.github_repo.setPlaceholderText("owner/repository");self.github_repo.setText(str(s.get("github_repo","IGrok2/NexTerm")))
         self.version_label=CaptionLabel(f"Installed version: {__version__}",self)
         self.check_updates=PushButton(FIF.SYNC,"Check GitHub release",self);self.check_updates.clicked.connect(self.check_update)
         self.license_key=LineEdit();self.license_key.setPlaceholderText("Enterprise activation code");self.license_key.setText(str(s.get("license_key","")))
+        self.license_server=LineEdit();self.license_server.setPlaceholderText("Optional private license endpoint");self.license_server.setText(str(s.get("license_server","")))
         self.license_label=CaptionLabel(f"{s.get('license_edition','Standard')} / {s.get('license_status','active')}",self)
         self.activate_license=PushButton(FIF.ACCEPT,"Activate license",self);self.activate_license.clicked.connect(self.activate)
         root.addWidget(self._card("Appearance",(("App theme",self.theme),("Color palette",self.palette),("Windows accent",self.accent),("Window opacity",self.opacity),("Windows 11 Mica effect",self.mica))))
@@ -471,7 +472,7 @@ class SettingsPage(QWidget):
         root.addWidget(self._card("System",(("Start with Windows",self.autostart),("Check updates from",self.github_repo),("Version",self.version_label),("",self.check_updates))))
         root.addWidget(self._card("Connections and files",(("SSH keepalive",self.keepalive),("Reconnect automatically",self.reconnect),("Show hidden SFTP files",self.hidden),("Confirm before closing sessions",self.confirm))))
         root.addWidget(self._card("Notifications",(("Show alerts in NexTerm",self.in_app_notifications),("Show Windows notifications",self.system_notifications),("Play sound",self.sound_notifications))))
-        root.addWidget(self._card("License",(("Edition",self.license_label),("Activation code",self.license_key),("",self.activate_license))))
+        root.addWidget(self._card("License",(("Edition",self.license_label),("Activation code",self.license_key),("License endpoint",self.license_server),("",self.activate_license))))
         root.addWidget(self._card("Discord Rich Presence",(("Enable Discord RPC",self.discord_rpc),("Application ID",self.discord_client_id),("Activity text",self.discord_details))))
         note=CaptionLabel("Passwords and key passphrases are stored in Windows Credential Manager. Other data stays in %APPDATA%\\NexTerm.",self);note.setWordWrap(True);root.addWidget(note)
         actions=QHBoxLayout();actions.addStretch();save=PrimaryPushButton(FIF.SAVE,"Save and apply");save.clicked.connect(self.save);actions.addWidget(save);root.addLayout(actions);root.addStretch()
@@ -505,13 +506,13 @@ class SettingsPage(QWidget):
             else:InfoBar.success("Up to date",f"NexTerm {__version__} is the latest release.",parent=self,position=InfoBarPosition.TOP_RIGHT)
         except Exception as exc:QMessageBox.warning(self,"Update check failed",str(exc))
     def activate(self):
-        state=validate_license(self.license_key.text(),self.store.license_cache_path)
-        s=self.store.data["settings"];s["license_key"]=state.key;s["license_edition"]=state.edition;s["license_status"]=state.status;self.store.save()
+        state=validate_license(self.license_key.text(),self.store.license_cache_path,self.license_server.text().strip())
+        s=self.store.data["settings"];s["license_key"]=state.key;s["license_server"]=self.license_server.text().strip();s["license_edition"]=state.edition;s["license_status"]=state.status;self.store.save()
         self.license_label.setText(f"{state.edition} / {state.status}")
         if state.edition.casefold()=="enterprise" and state.status in {"active","trial","offline"}:InfoBar.success("License",state.message,parent=self,position=InfoBarPosition.TOP_RIGHT)
         else:InfoBar.warning("License",state.message,parent=self,position=InfoBarPosition.TOP_RIGHT)
     def save(self):
-        s=self.store.data["settings"]; s.update(theme=self.theme.currentText(),palette=self.palette.currentText(),accent=self.accent.text(),terminal_bg=self.bg.text(),terminal_fg=self.fg.text(),window_opacity=self.opacity.value(),font=self.font.currentText(),font_size=self.font_size.value(),scrollback=self.scrollback.value(),keepalive=self.keepalive.value(),reconnect=self.reconnect.isChecked(),copy_on_select=self.copy_select.isChecked(),confirm_close=self.confirm.isChecked(),cursor_blink=self.cursor_blink.isChecked(),mica=self.mica.isChecked(),autostart=self.autostart.isChecked(),show_hidden=self.hidden.isChecked(),in_app_notifications=self.in_app_notifications.isChecked(),system_notifications=self.system_notifications.isChecked(),sound_notifications=self.sound_notifications.isChecked(),github_repo=self.github_repo.text().strip(),discord_rpc=self.discord_rpc.isChecked(),discord_client_id=self.discord_client_id.text().strip(),discord_details=self.discord_details.text().strip(),license_key=self.license_key.text().strip())
+        s=self.store.data["settings"]; s.update(theme=self.theme.currentText(),palette=self.palette.currentText(),accent=self.accent.text(),terminal_bg=self.bg.text(),terminal_fg=self.fg.text(),window_opacity=self.opacity.value(),font=self.font.currentText(),font_size=self.font_size.value(),scrollback=self.scrollback.value(),keepalive=self.keepalive.value(),reconnect=self.reconnect.isChecked(),copy_on_select=self.copy_select.isChecked(),confirm_close=self.confirm.isChecked(),cursor_blink=self.cursor_blink.isChecked(),mica=self.mica.isChecked(),autostart=self.autostart.isChecked(),show_hidden=self.hidden.isChecked(),in_app_notifications=self.in_app_notifications.isChecked(),system_notifications=self.system_notifications.isChecked(),sound_notifications=self.sound_notifications.isChecked(),github_repo=self.github_repo.text().strip(),discord_rpc=self.discord_rpc.isChecked(),discord_client_id=self.discord_client_id.text().strip(),discord_details=self.discord_details.text().strip(),license_key=self.license_key.text().strip(),license_server=self.license_server.text().strip())
         try:set_autostart(self.autostart.isChecked())
         except Exception as exc:QMessageBox.warning(self,"Autostart",str(exc))
         self.store.save(); apply_theme(s); self.changed.emit(); InfoBar.success("Saved","Personalization applied",parent=self,position=InfoBarPosition.TOP_RIGHT)
@@ -768,7 +769,7 @@ class MainWindow(FluentWindow):
     def refresh_license_state(self):
         key=str(self.store.data["settings"].get("license_key","")).strip()
         if not key:return
-        state=validate_license(key,self.store.license_cache_path)
+        state=validate_license(key,self.store.license_cache_path,str(self.store.data["settings"].get("license_server","")))
         self.store.data["settings"]["license_edition"]=state.edition
         self.store.data["settings"]["license_status"]=state.status
         self.store.save()

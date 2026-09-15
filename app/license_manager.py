@@ -15,8 +15,8 @@ from typing import Any
 from uuid import uuid4
 
 
-LICENSE_SERVER = "http://193.23.221.4"
-LICENSE_SECRET = "NexTerm-2026-local-license-signing-key"
+DEFAULT_LICENSE_SERVER = "https://licenses.example.com"
+LICENSE_SECRET = "NexTerm-local-license-signing-key"
 OFFLINE_GRACE_DAYS = 14
 
 
@@ -45,13 +45,13 @@ def generate_activation_codes(count: int = 16) -> list[str]:
     return [uuid4().hex.upper() for _ in range(count)]
 
 
-def validate_license(key: str, cache_path: str | Path) -> LicenseState:
+def validate_license(key: str, cache_path: str | Path, server_url: str = "") -> LicenseState:
     key = normalize_key(key)
     cache_path = Path(cache_path)
     if not key:
         return LicenseState()
     try:
-        state = _fetch_license(key)
+        state = _fetch_license(key, server_url)
         _write_cache(cache_path, state)
         return state
     except Exception as exc:
@@ -63,8 +63,9 @@ def validate_license(key: str, cache_path: str | Path) -> LicenseState:
         return LicenseState("Standard", "server_unavailable", key, message=f"License server unavailable: {exc}")
 
 
-def _fetch_license(key: str) -> LicenseState:
-    url = f"{LICENSE_SERVER.rstrip('/')}/licenses/{key}.json?machine={machine_id()}"
+def _fetch_license(key: str, server_url: str = "") -> LicenseState:
+    base_url = (server_url or os.getenv("NEXTERM_LICENSE_SERVER") or DEFAULT_LICENSE_SERVER).strip()
+    url = f"{base_url.rstrip('/')}/licenses/{key}.json?machine={machine_id()}"
     request = urllib.request.Request(url, headers={"User-Agent": "NexTerm/1.0"})
     with urllib.request.urlopen(request, timeout=6) as response:
         payload = json.loads(response.read().decode("utf-8"))
